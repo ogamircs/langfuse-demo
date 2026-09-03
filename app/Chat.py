@@ -92,18 +92,25 @@ def render_assistant(msg: dict, idx: int) -> None:
     st.markdown(msg["content"] or "_(no answer)_")
     summary = msg.get("summary") or {}
     meta = msg.get("prompt_meta") or {}
-    cols = st.columns(6)
+    cols = st.columns(5)
     cols[0].metric("Cost", fmt_usd(summary.get("cost_usd")))
     cols[1].metric("Latency", fmt_ms(summary.get("duration_ms")))
     cols[2].metric("Tokens", fmt_int((summary.get("usage") or {}).get("total")))
     cols[3].metric("Model turns", fmt_int(summary.get("num_turns")))
     cols[4].metric("Tool calls", f"{summary.get('tool_calls', 0)} ({summary.get('tool_errors', 0)} err)")
-    cols[5].metric("Prompt", f"{meta.get('prompt_label', '?')} v{meta.get('prompt_version') or '-'}", help=f"source: {meta.get('prompt_source')}")
+    version = meta.get("prompt_version")
+    st.caption(
+        f"System prompt `{meta.get('prompt_label', '?')}` · "
+        + (f"Langfuse v{version}" if version else f"{meta.get('prompt_source', 'local')} prompt")
+        + f" · effort `{(msg.get('effort') or settings.effort)}` · model `{settings.model}`"
+    )
     with st.expander("🔍 Trace timeline (what Langfuse sees)", expanded=False):
         if msg.get("trace_url"):
             st.link_button("Open trace in Langfuse ↗", msg["trace_url"])
-        elif msg.get("trace_id"):
+        elif msg.get("trace_id") and tracing_active():
             st.caption(f"trace id `{msg['trace_id']}`")
+        elif not tracing_active():
+            st.caption("Langfuse not configured: this timeline is the local view of the events that would be traced.")
         render_timeline(msg.get("events") or [])
     if msg.get("trace_id") and tracing_active():
         fb1, fb2, fb3 = st.columns([1, 2, 3])
@@ -175,6 +182,7 @@ if prompt:
             ss.messages.append({
                 "role": "assistant", "content": result.answer, "summary": result.summary, "events": result.events,
                 "trace_id": result.trace_id, "trace_url": result.trace_url, "prompt_meta": result.prompt_meta, "user_id": user_id,
+                "effort": effort,
             })
         except Exception as exc:  # surfaced in UI; the trace root is marked ERROR by turn_trace
             status.update(label="Failed", state="error")

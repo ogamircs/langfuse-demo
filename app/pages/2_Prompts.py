@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import difflib
+import json
 
 import streamlit as st
 
@@ -69,7 +70,8 @@ for v in versions:
     except Exception as exc:
         st.warning(f"v{v}: {exc}")
 
-rows = [{"version": v, "labels": ", ".join(p.labels), "commit": p.commit_message, "config": p.config} for v, p in fetched.items()]
+rows = [{"version": v, "labels": ", ".join(p.labels), "commit": p.commit_message, "config": json.dumps(p.config, default=str)}
+        for v, p in fetched.items()]
 st.dataframe(rows, use_container_width=True, hide_index=True)
 
 st.subheader("Promote a version to a label")

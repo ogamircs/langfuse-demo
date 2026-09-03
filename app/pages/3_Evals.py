@@ -6,6 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+import json
+
 import streamlit as st
 
 from app.common import langfuse_banner
@@ -26,7 +28,8 @@ items = build_dataset_items()
 with st.expander(f"Dataset `{settings.dataset_name}` — {len(items)} items (local definition)", expanded=False):
     st.dataframe(
         [{"id": i["id"], "category": i["metadata"]["category"], "question": i["input"]["question"],
-          "expected": i["expected_output"].get("value"), "facts": i["expected_output"].get("facts")} for i in items],
+          "expected": i["expected_output"].get("value"),
+          "facts": json.dumps(i["expected_output"].get("facts") or {}, default=str)} for i in items],
         use_container_width=True, hide_index=True,
     )
 
@@ -69,11 +72,11 @@ if result is not None:
                "cost_usd": out.get("cost_usd"), "tool_calls": out.get("tool_calls"), "trace_id": ir.trace_id,
                "answer": (out.get("answer") or "")[:200]}
         for ev in ir.evaluations:
-            row[ev.name] = ev.value
+            row[ev.name] = ev.value if isinstance(ev.value, (int, float)) else str(ev.value)
         rows.append(row)
     st.dataframe(rows, use_container_width=True, hide_index=True)
     st.markdown("**Run-level evaluations**")
-    st.dataframe([{"name": e.name, "value": e.value} for e in result.run_evaluations], hide_index=True)
+    st.dataframe([{"name": e.name, "value": str(e.value)} for e in result.run_evaluations], hide_index=True)
     with st.expander("Formatted summary"):
         st.code(result.format())
 
@@ -81,7 +84,12 @@ if tracing_active():
     st.subheader("Previous runs")
     try:
         runs = get_langfuse().api.datasets.get_runs(settings.dataset_name).data
-        st.dataframe([{"run": r.name, "created": r.created_at, "description": r.description, "metadata": r.metadata} for r in runs],
-                     use_container_width=True, hide_index=True)
     except Exception as exc:
-        st.caption(f"No runs yet ({exc})")
+        runs = []
+        st.caption("No experiment runs found for this dataset yet. Seed the dataset and run an experiment above.")
+        with st.expander("API detail"):
+            st.code(str(exc)[:1500])
+    if runs:
+        st.dataframe([{"run": r.name, "created": r.created_at, "description": r.description,
+                       "metadata": json.dumps(r.metadata, default=str)} for r in runs],
+                     use_container_width=True, hide_index=True)

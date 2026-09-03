@@ -12,7 +12,7 @@ seed:             ## build the synthetic DuckDB warehouse + golden answers
 	$(PY) -m data.seed
 
 ui:               ## run the Streamlit chat + dashboard
-	$(STREAMLIT) run app/ui.py
+	$(STREAMLIT) run app/Chat.py
 
 test:             ## offline tests (no LLM, no Langfuse network)
 	$(PY) -m pytest -q

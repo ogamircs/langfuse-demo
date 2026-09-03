@@ -38,9 +38,11 @@ class _Handler(BaseHTTPRequestHandler):
         """Serve canned JSON for Langfuse public API reads (dashboard tests)."""
         import json as _json
         body = b'{"status":"ok"}'
-        for prefix, payload in (self.server.canned or {}).items():  # type: ignore[attr-defined]
-            if prefix in self.path:
-                body = _json.dumps(payload).encode()
+        path = self.path.split("?", 1)[0]
+        # longest matching prefix wins, so "/prompts/<name>" beats "/prompts"
+        for prefix in sorted((self.server.canned or {}), key=len, reverse=True):  # type: ignore[attr-defined]
+            if path.startswith(prefix) or prefix in path:
+                body = _json.dumps(self.server.canned[prefix]).encode()  # type: ignore[attr-defined]
                 break
         self.server.requests.append(self.path)  # type: ignore[attr-defined]
         self.send_response(200)

@@ -65,9 +65,11 @@ def test_dashboard_with_canned_api(live_stub):
     metrics = {m.label: m.value for m in at.metric}
     assert metrics["Agent turns"] == "5"
     assert metrics["LLM cost"] == "$0.5000"
-    assert metrics["Latency p50 · p95"] == "5.0s · 9.0s"
+    assert metrics["Latency p50"] == "5.0s"
     assert metrics["Tool error rate"] == "100.0%"
-    assert "80%" in metrics["👍 rate · accuracy"]
+    assert metrics["👍 rate"] == "80%"
+    deltas = {m.label: m.delta for m in at.metric}
+    assert deltas["Latency p50"] == "p95 9.0s" and deltas["LLM cost"] == "$0.1000 per turn"
     assert any("/api/public/v2/metrics" in r for r in live_stub.requests)
     assert any("/api/public/traces" in r for r in live_stub.requests)
     assert not any("_lf_last_error" in str(c.value) and "error" in str(c.value) for c in at.caption)

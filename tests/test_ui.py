@@ -6,7 +6,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 from streamlit.testing.v1 import AppTest
 
-PAGES = ["app/ui.py", "app/pages/1_Dashboard.py", "app/pages/2_Prompts.py", "app/pages/3_Evals.py"]
+PAGES = ["app/Chat.py", "app/pages/1_Dashboard.py", "app/pages/2_Prompts.py", "app/pages/3_Evals.py"]
 
 
 @pytest.mark.parametrize("page", PAGES)

@@ -70,6 +70,12 @@ def base_layout(fig: go.Figure, title: str, y_title: str = "", height: int = 300
     return fig
 
 
+def time_axis(fig: go.Figure) -> go.Figure:
+    """Date ticks for time-bucketed charts (avoids sub-second ticks when only one bucket exists)."""
+    fig.update_xaxes(type="date", tickformat="%b %d" if gran == "day" else "%b %d %H:%M", nticks=8)
+    return fig
+
+
 # ---------------------------------------------------------------------------------------
 # KPI row
 # ---------------------------------------------------------------------------------------
@@ -93,16 +99,17 @@ tokens = scalar(gens, "totalTokens", "sum")
 fb = scalar(feedback, "value", "avg")
 acc = scalar(accuracy, "value", "avg")
 
-k = st.columns(8)
-k[0].metric("Agent turns", f"{int(n_turns or 0):,}")
-k[1].metric("LLM cost", fmt_usd(cost))
-k[2].metric("Cost / turn", fmt_usd((cost or 0) / n_turns) if n_turns else "—")
-k[3].metric("Latency p50 · p95", f"{fmt_ms(p50)} · {fmt_ms(p95)}")
-k[4].metric("Tokens", f"{int(tokens or 0):,}")
-k[5].metric("Tool calls", f"{int(n_tools or 0):,}", help="TOOL observations opened by the PreToolUse hook")
-k[6].metric("Tool error rate", f"{(n_tool_err or 0) / n_tools * 100:.1f}%" if n_tools else "—")
-k[7].metric("👍 rate · accuracy", f"{fb * 100:.0f}% · {acc:.2f}" if fb is not None and acc is not None else
-            (f"{fb * 100:.0f}%" if fb is not None else (f"acc {acc:.2f}" if acc is not None else "—")))
+r1 = st.columns(4)
+r1[0].metric("Agent turns", f"{int(n_turns or 0):,}", help="root `agent` observations named loyalty-agent-turn")
+r1[1].metric("LLM cost", fmt_usd(cost), delta=f"{fmt_usd((cost or 0) / n_turns)} per turn" if n_turns else None, delta_color="off")
+r1[2].metric("Tokens", f"{int(tokens or 0):,}", delta=f"{int(tokens / n_turns):,} per turn" if n_turns and tokens else None, delta_color="off")
+r1[3].metric("Latency p50", fmt_ms(p50), delta=f"p95 {fmt_ms(p95)}" if p95 is not None else None, delta_color="off")
+r2 = st.columns(4)
+r2[0].metric("Tool calls", f"{int(n_tools or 0):,}", help="TOOL observations opened by the PreToolUse hook")
+r2[1].metric("Tool error rate", f"{(n_tool_err or 0) / n_tools * 100:.1f}%" if n_tools else "—",
+             delta=f"{int(n_tool_err or 0)} failed" if n_tools else None, delta_color="inverse" if n_tool_err else "off")
+r2[2].metric("👍 rate", f"{fb * 100:.0f}%" if fb is not None else "—", help="BOOLEAN score `user-feedback`")
+r2[3].metric("Accuracy (1-5)", f"{acc:.2f}" if acc is not None else "—", help="NUMERIC score `accuracy` from reviewers")
 
 if st.session_state.get("_lf_last_error"):
     st.caption(f"⚠️ last Langfuse API error: {st.session_state['_lf_last_error']}")
@@ -120,7 +127,7 @@ with c1:
     if not turns_ts.empty and col:
         fig.add_bar(x=turns_ts["time_dimension"], y=turns_ts[col], marker_color=SERIES[0], name="turns",
                     hovertemplate="%{y} turns<extra></extra>")
-    st.plotly_chart(base_layout(fig, f"Agent turns per {gran}", "turns"), use_container_width=True)
+    st.plotly_chart(time_axis(base_layout(fig, f"Agent turns per {gran}", "turns")), use_container_width=True)
 
 cost_ts = lfd.metrics("observations", [("totalCost", "sum")], ["providedModelName"], GEN_FILTER, gran, days, env)
 with c2:
@@ -133,7 +140,7 @@ with c2:
             fig.add_bar(x=sub["time_dimension"], y=sub[col], name=str(m), marker_color=SERIES[i % 8],
                         hovertemplate="%{y:$.4f}<extra>" + str(m) + "</extra>")
         fig.update_layout(barmode="stack")
-    st.plotly_chart(base_layout(fig, f"LLM cost per {gran} by model", "USD"), use_container_width=True)
+    st.plotly_chart(time_axis(base_layout(fig, f"LLM cost per {gran} by model", "USD")), use_container_width=True)
 
 c3, c4 = st.columns(2)
 lat_ts = lfd.metrics("observations", [("latency", "p50"), ("latency", "p95")], [], ROOT_FILTER, gran, days, env)
@@ -143,7 +150,7 @@ with c3:
     if not lat_ts.empty and c50 and c95:
         fig.add_scatter(x=lat_ts["time_dimension"], y=lat_ts[c50] / 1000, mode="lines+markers", name="p50", line=dict(color=SERIES[0], width=2), marker=dict(size=8))
         fig.add_scatter(x=lat_ts["time_dimension"], y=lat_ts[c95] / 1000, mode="lines+markers", name="p95", line=dict(color=SERIES[1], width=2), marker=dict(size=8))
-    st.plotly_chart(base_layout(fig, "Turn latency (seconds)", "s"), use_container_width=True)
+    st.plotly_chart(time_axis(base_layout(fig, "Turn latency (seconds)", "s")), use_container_width=True)
 
 tool_by_name = lfd.metrics("observations", [("count", "count"), ("latency", "p50")], ["name"], TOOL_FILTER, None, days, env)
 with c4:
@@ -178,7 +185,7 @@ with c6:
     if not fb_ts.empty and col:
         fig.add_scatter(x=fb_ts["time_dimension"], y=fb_ts[col] * 100, mode="lines+markers", name="👍 rate",
                         line=dict(color=SERIES[0], width=2), marker=dict(size=8), hovertemplate="%{y:.0f}%<extra></extra>")
-    fig = base_layout(fig, "Thumbs-up rate (BOOLEAN score `user-feedback`)", "%")
+    fig = time_axis(base_layout(fig, "Thumbs-up rate (BOOLEAN score `user-feedback`)", "%"))
     fig.update_yaxes(range=[0, 100])
     st.plotly_chart(fig, use_container_width=True)
 
@@ -224,13 +231,13 @@ else:
 e1, e2 = st.columns(2)
 with e1:
     st.subheader("Recent scores")
-    st.dataframe(scores.head(50) if not scores.empty else pd.DataFrame(), use_container_width=True, hide_index=True)
+    st.dataframe(scores.head(50).astype({"value": str}) if not scores.empty else pd.DataFrame(), use_container_width=True, hide_index=True)
 with e2:
     st.subheader("Errors & guardrail hits")
     errs = lfd.observations(days, level="ERROR", limit=50, environment=env)
     warns = lfd.observations(days, obs_type="GUARDRAIL", limit=50, environment=env)
     both = pd.concat([errs, warns], ignore_index=True) if not (errs.empty and warns.empty) else pd.DataFrame()
-    st.dataframe(both, use_container_width=True, hide_index=True)
+    st.dataframe(both.astype(str) if not both.empty else both, use_container_width=True, hide_index=True)
 
 with st.expander("How this page queries Langfuse (copy these into a native Langfuse dashboard)"):
     st.markdown(
