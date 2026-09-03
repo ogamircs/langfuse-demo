@@ -1,0 +1,77 @@
+{
+  "members_total": {
+    "value": 1500,
+    "also": {
+      "joined_2025": 209
+    }
+  },
+  "q2_2025_revenue": {
+    "value": 1144871.97,
+    "also": {
+      "top_banner": "Neighbourhood Market"
+    }
+  },
+  "top_segment_basket": {
+    "value": 252.31,
+    "also": {
+      "segment": "Family Stock-Up",
+      "top3": [
+        [
+          "Family Stock-Up",
+          252.31
+        ],
+        [
+          "Value Seeker",
+          135.49
+        ],
+        [
+          "Fresh Foodie",
+          128.65
+        ]
+      ]
+    }
+  },
+  "private_label_share": {
+    "value": null,
+    "also": {
+      "ON": 37.2,
+      "QC": 38.6
+    }
+  },
+  "spring_produce_lift_pct": {
+    "value": 52.4
+  },
+  "active_members_june_2025": {
+    "value": 1055
+  },
+  "top5_points_products": {
+    "value": 4.1,
+    "also": {
+      "products": [
+        "Compliments Frozen Item 299",
+        "Compliments Produce Item 209",
+        "Compliments Beverages Item 58",
+        "Compliments Beverages Item 33",
+        "Compliments Dairy Item 45"
+      ]
+    }
+  },
+  "back_to_school": {
+    "value": 21,
+    "also": {
+      "revenue": 35496.63,
+      "revenue_per_day": 1690.32
+    }
+  },
+  "at_risk_members": {
+    "value": 138
+  },
+  "top_store_rev_per_sqft": {
+    "value": 11.32,
+    "also": {
+      "store_id": 21,
+      "banner": "Discount Depot",
+      "city": "Calgary"
+    }
+  }
+}

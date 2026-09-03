@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/demo.duckdb
+data/demo.duckdb.wal
+.pytest_cache/
+.streamlit/secrets.toml
+*.egg-info/
+.langfuse_cache/
